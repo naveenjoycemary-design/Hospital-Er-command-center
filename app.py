@@ -28,7 +28,7 @@ from datetime import datetime, timedelta
 # PAGE CONFIG
 # ─────────────────────────────────────────────
 st.set_page_config(
-    page_title="ER Command Center Pro",
+    page_title="ER Command Center ",
     page_icon="🏥",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -486,7 +486,7 @@ with st.sidebar:
     <div style="text-align:center;padding:8px 0 20px;">
         <div style="font-family:'Rajdhani',sans-serif;font-size:1.6rem;
                     font-weight:700;color:#00b4ff;letter-spacing:0.12em;">
-            🏥 ER-PRO
+            🏥 ER-CMD CENTER
         </div>
         <div style="font-size:0.68rem;color:#3d6080;letter-spacing:0.2em;
                     text-transform:uppercase;margin-top:2px;">
@@ -619,7 +619,7 @@ with tab_walk:
                 padding:28px 36px;margin-bottom:24px;">
         <div style="font-family:'Rajdhani',sans-serif;font-size:2.2rem;font-weight:700;
                     color:#fff;letter-spacing:0.08em;">
-            🏥 ER Command Center Pro
+            🏥 ER Command Center 
         </div>
         <div style="font-size:0.9rem;color:#7aa5c4;margin-top:8px;line-height:1.7;">
             A real-time emergency department operations dashboard designed for
@@ -763,7 +763,7 @@ with tab_walk:
     st.markdown("""
     <div style="text-align:center;margin-top:24px;font-family:'Share Tech Mono',monospace;
                 font-size:0.72rem;color:#1a3a5c;letter-spacing:0.12em;">
-        ER COMMAND CENTER PRO  ·  BUILT BY Naveen Raja
+        ER COMMAND CENTER   ·  BUILT BY Naveen Raja
     </div>
     """, unsafe_allow_html=True)
 
@@ -789,7 +789,7 @@ with tab_dash:
         <div>
             <div style="font-family:'Rajdhani',sans-serif;font-size:2rem;
                         font-weight:700;color:#fff;letter-spacing:0.08em;line-height:1;">
-                🏥 ER COMMAND CENTER <span style="color:#00b4ff;">PRO</span>
+                🏥 ER  <span style="color:#00b4ff;">COMMAND CENTER </span>
             </div>
             <div style="font-size:0.82rem;color:#7aa5c4;margin-top:4px;
                         font-family:'Share Tech Mono',monospace;letter-spacing:0.05em;">
@@ -1233,6 +1233,6 @@ with tab_dash:
     st.markdown(f"""
     <div style="text-align:center;font-family:'Share Tech Mono',monospace;
                 font-size:0.65rem;color:#1a3a5c;letter-spacing:0.15em;padding:12px 0;">
-        ER COMMAND CENTER PRO  ·  AUTO-REFRESH 60s  ·  {now_ist}  ·  {HOSPITAL_BRANCH.upper()}
+        ER COMMAND CENTER   ·  AUTO-REFRESH 60s  ·  {now_ist}  ·  {HOSPITAL_BRANCH.upper()}
     </div>
     """, unsafe_allow_html=True)
