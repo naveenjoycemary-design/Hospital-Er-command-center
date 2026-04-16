@@ -1,0 +1,9 @@
+streamlit
+pandas
+mysql-connector-python
+requests
+plotly
+faker
+streamlit-autorefresh
+pytz
+statsmodels
