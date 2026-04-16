@@ -490,7 +490,7 @@ with st.sidebar:
         </div>
         <div style="font-size:0.68rem;color:#3d6080;letter-spacing:0.2em;
                     text-transform:uppercase;margin-top:2px;">
-            Command Center v2.1
+            Command Center 
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -763,7 +763,7 @@ with tab_walk:
     st.markdown("""
     <div style="text-align:center;margin-top:24px;font-family:'Share Tech Mono',monospace;
                 font-size:0.72rem;color:#1a3a5c;letter-spacing:0.12em;">
-        ER COMMAND CENTER PRO  ·  v2.1  ·  BUILT FOR REAL-TIME CLINICAL OPERATIONS
+        ER COMMAND CENTER PRO  ·  BUILT BY Naveen Raja
     </div>
     """, unsafe_allow_html=True)
 
