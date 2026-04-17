@@ -446,7 +446,7 @@ def insert_patient(weather: dict):
         HOSPITAL_BRANCH,
     ))
 
-def insert_batch(weather: dict, beds_available: int, count: int):
+def insert_batch(weather: dict, count: int):
     for _ in range(count):
         insert_patient(weather)
 
