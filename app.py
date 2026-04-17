@@ -576,7 +576,7 @@ with st.sidebar:
 # ─────────────────────────────────────────────
 # ══════════════  BOOTSTRAP  ══════════════════
 # ─────────────────────────────────────────────
-auto_discharge(max_er_h)
+auto_discharge()
 
 weather         = get_weather(weather_city)
 w_sev, w_label  = weather_severity(weather)
