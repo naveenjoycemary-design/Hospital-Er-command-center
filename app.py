@@ -263,7 +263,7 @@ IST  = pytz.timezone("Asia/Kolkata")
 # ─────────────────────────────────────────────
 DEPARTMENTS = ["General Medicine", "Orthopedics", "Cardiology",
                "Neurology", "Pediatrics", "Trauma", "Burns", "Psychiatry"]
-
+TOTAL_BEDS = 80   # ✅ MUST COME FIRST
 GENERAL_BEDS  = int(TOTAL_BEDS * 0.8)   # 64
 EMERGENCY_BEDS = TOTAL_BEDS - GENERAL_BEDS  # 16
 
