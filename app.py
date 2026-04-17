@@ -453,12 +453,18 @@ def insert_batch(weather: dict, count: int):
 # ─────────────────────────────────────────────
 # AUTO DISCHARGE
 # ─────────────────────────────────────────────
-def auto_discharge(max_hours: int = MAX_ER_HOURS):
-    run_write(f"""
+def auto_discharge():
+    run_write("""
         UPDATE er_patients_pro
-        SET    discharged = 1
-        WHERE  discharged = 0
-          AND  arrival_time < NOW() - INTERVAL {max_hours} HOUR
+        SET discharged = 1
+        WHERE discharged = 0
+        AND (
+            (triage_level = 5 AND arrival_time < NOW() - INTERVAL 2 HOUR) OR
+            (triage_level = 4 AND arrival_time < NOW() - INTERVAL 3 HOUR) OR
+            (triage_level = 3 AND arrival_time < NOW() - INTERVAL 4 HOUR) OR
+            (triage_level = 2 AND arrival_time < NOW() - INTERVAL 5 HOUR) OR
+            (triage_level = 1 AND arrival_time < NOW() - INTERVAL 6 HOUR)
+        )
     """)
 
 # ─────────────────────────────────────────────
