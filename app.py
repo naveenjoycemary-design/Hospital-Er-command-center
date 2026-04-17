@@ -420,7 +420,7 @@ def insert_patient(weather: dict):
         wait_time = random.randint(26, 35)
 
     else:  # triage 5
-        wait_time = random.randint(36, 45)
+        wait_time = random.randint(60, 75)
     
     
     
