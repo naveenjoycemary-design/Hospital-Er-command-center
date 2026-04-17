@@ -634,8 +634,11 @@ total_pts     = len(df)
 avg_wait      = round(df["wait_time"].mean(), 1)
 critical_df   = df[df["triage_level"].isin([1, 2])]
 critical_cnt  = len(critical_df)
-beds_assigned = int(df["bed_assigned"].sum())
-bed_occ_pct   = round(beds_assigned / TOTAL_BEDS * 100, 1)
+full_df = load_active()
+
+beds_assigned = int(full_df["bed_assigned"].sum())
+bed_occ_pct   = min(100, round(beds_assigned / TOTAL_BEDS * 100, 1))
+beds_avail    = TOTAL_BEDS - beds_assigned
 beds_avail    = TOTAL_BEDS - beds_assigned
 long_wait_df  = df[df["wait_time"] > 60]
 
