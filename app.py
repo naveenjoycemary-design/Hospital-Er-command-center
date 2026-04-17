@@ -282,7 +282,7 @@ SYMPTOMS_MAP = {
     5: ["Prescription refill", "Minor rash", "Cold symptoms", "Routine check"],
 }
 
-TOTAL_BEDS    = 80
+#TOTAL_BEDS    = 80
 MAX_ER_HOURS  = 6
 AUTO_INTERVAL = 60    # seconds
 OVERLOAD_PCT  = 0.85
@@ -369,30 +369,23 @@ def weather_severity(w: dict) -> tuple:
     return 0, "✅ NORMAL"
 
 def weather_admission_multiplier(sev: int) -> float:
-    return {0: 1.0, 1: 1.4, 2: 1.9, 3: 2.5}.get(sev, 1.0)
+    return {0:1.0, 1:1.2, 2:1.5, 3:1.8}.get(sev, 1.0)
 
 # ─────────────────────────────────────────────
 # SIMULATE & INSERT PATIENTS
 # ─────────────────────────────────────────────
 HOSPITAL_BRANCH = "City General Hospital"
 
-def insert_patient(weather: dict):
+def insert_patient(weather: dict, emergency_used: int, general_used: int):
     sev   = weather_severity(weather)[0]
 
     multi = weather_admission_multiplier(sev)
     w_crit = [int(5 * multi), int(10 * multi), 35, 30, 20]
     triage = random.choices([1, 2, 3, 4, 5], weights=w_crit)[0]
     # ── CURRENT BED USAGE ──
-    bed_df = run_query("""
-    SELECT 
-        SUM(CASE WHEN triage_level IN (1,2) THEN 1 ELSE 0 END) AS emergency_used,
-        SUM(CASE WHEN triage_level IN (3,4,5) THEN 1 ELSE 0 END) AS general_used
-    FROM er_patients_pro
-    WHERE bed_assigned = 1 AND discharged = 0
-    """)
+    
 
-    emergency_used = int(bed_df["emergency_used"].iloc[0] or 0)
-    general_used   = int(bed_df["general_used"].iloc[0] or 0)
+
 
 
     # ── BED ALLOCATION LOGIC ──
@@ -447,13 +440,44 @@ def insert_patient(weather: dict):
     ))
 
 def insert_batch(weather: dict, count: int):
+
+    bed_df = run_query("""
+    SELECT 
+        SUM(CASE WHEN triage_level IN (1,2) THEN 1 ELSE 0 END) AS emergency_used,
+        SUM(CASE WHEN triage_level IN (3,4,5) THEN 1 ELSE 0 END) AS general_used
+    FROM er_patients_pro
+    WHERE bed_assigned = 1 AND discharged = 0
+    """)
+
+    emergency_used = int(bed_df["emergency_used"].iloc[0] or 0)
+    general_used   = int(bed_df["general_used"].iloc[0] or 0)
+
     for _ in range(count):
-        insert_patient(weather)
+        insert_patient(weather, emergency_used, general_used)
+
+        # update counters dynamically
+        if emergency_used + general_used < TOTAL_BEDS:
+            if random.choice([True, False]):
+                emergency_used += 1
+            else:
+                general_used += 1
+    
 
 # ─────────────────────────────────────────────
 # AUTO DISCHARGE
 # ─────────────────────────────────────────────
 def auto_discharge():
+    # ── GET CURRENT BED USAGE ──
+    df = run_query("""
+        SELECT COUNT(*) AS total_used
+        FROM er_patients_pro
+        WHERE bed_assigned = 1 AND discharged = 0
+    """)
+
+    total_used = int(df["total_used"].iloc[0] or 0)
+    occupancy = total_used / TOTAL_BEDS
+
+    # ── BASE DISCHARGE (NORMAL FLOW) ──
     run_write("""
         UPDATE er_patients_pro
         SET discharged = 1
@@ -466,6 +490,26 @@ def auto_discharge():
             (triage_level = 1 AND arrival_time < NOW() - INTERVAL 6 HOUR)
         )
     """)
+
+    # ── HIGH LOAD → FAST CLEAR LOW PRIORITY ──
+    if occupancy > 0.85:
+        run_write("""
+            UPDATE er_patients_pro
+            SET discharged = 1
+            WHERE discharged = 0
+            AND triage_level >= 4
+            AND arrival_time < NOW() - INTERVAL 1 HOUR
+        """)
+
+    # ── CRITICAL LOAD → EVEN MORE AGGRESSIVE ──
+    if occupancy > 0.95:
+        run_write("""
+            UPDATE er_patients_pro
+            SET discharged = 1
+            WHERE discharged = 0
+            AND triage_level >= 3
+            AND arrival_time < NOW() - INTERVAL 1 HOUR
+        """)
 
 # ─────────────────────────────────────────────
 # LOAD DATA
@@ -659,7 +703,6 @@ critical_cnt  = len(critical_df)
 beds_assigned = int(full_df["bed_assigned"].sum())
 bed_occ_pct   = min(100, round(beds_assigned / TOTAL_BEDS * 100, 1))
 beds_avail    = TOTAL_BEDS - beds_assigned
-beds_avail    = TOTAL_BEDS - beds_assigned
 long_wait_df  = df[df["wait_time"] > 60]
 
 hist_df       = load_history(6)
@@ -709,8 +752,8 @@ with tab_walk:
     sections = [
         ("🔄 Auto-Refresh & Live Data",
          "The dashboard automatically refreshes every <b>60 seconds</b> — no manual reload needed. "
-         "Every refresh pulls live patient data from the hospital database and inserts a minimum of "
-         "<b>10 new simulated patient arrivals</b> to keep the feed active. "
+         "Every refresh pulls live patient data from the hospital database and inserts 1–6 simulated "
+         "<b>patient arrivals dynamically based on load and weather conditions</b> to keep the feed active. "
          "The timestamp at top-right always shows the last sync time in IST.",
          "#00b4ff"),
 
@@ -921,14 +964,14 @@ with tab_dash:
                     color:#ff3355;letter-spacing:0.07em;
                     box-shadow:0 0 25px rgba(255,51,85,0.3);">
             🚨 &nbsp;OVERLOAD ALERT — ER occupancy at
-            <strong>{round(total_pts/TOTAL_BEDS*100,1)}%</strong>
+            <strong>{bed_occ_pct}%</strong>
             exceeds threshold ({overload}%). Divert protocol recommended.
         </div>
         """, unsafe_allow_html=True)
 
     # ── KPI Row ──
     k = st.columns(8)
-    k[0].metric("🛏 Active Census",    total_pts,        f"of {TOTAL_BEDS} beds")
+    k[0].metric("🛏 Active Census",    beds_assigned,        f"of {TOTAL_BEDS} beds")
     k[1].metric("⏱ Avg Wait",          f"{avg_wait}m",   f"Forecast: {forecast_next}/hr")
     k[2].metric("🚨 Critical",          critical_cnt,     "Triage 1–2")
     k[3].metric("🛏 Bed Occupancy",     f"{bed_occ_pct}%",f"{beds_avail} free")
@@ -1276,7 +1319,7 @@ with tab_dash:
 
     s1, s2, s3, s4, s5 = st.columns(5)
     for col, label, val, suffix in [
-        (s1, "Occupancy Rate",  round(total_pts/TOTAL_BEDS*100, 1), "%"),
+        (s1, "Occupancy Rate",  round(bed_occ_pct, 1), "%"),
         (s2, "Avg Wait Time",   avg_wait,   " min"),
         (s3, "Critical Cases",  critical_cnt, ""),
         (s4, "Bed Utilization", f"{bed_occ_pct}", "%"),
