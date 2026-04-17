@@ -447,9 +447,8 @@ def insert_patient(weather: dict):
     ))
 
 def insert_batch(weather: dict, beds_available: int, count: int):
-    """Insert multiple patients efficiently."""
     for _ in range(count):
-        insert_patient(weather, beds_available)
+        insert_patient(weather)
 
 # ─────────────────────────────────────────────
 # AUTO DISCHARGE
@@ -587,7 +586,7 @@ if "last_insert_ts" not in st.session_state:
 now_ts = time.time()
 if now_ts - st.session_state["last_insert_ts"] >= AUTO_INTERVAL:
     insert_count = max(MIN_INSERT, int(round(w_multi * MIN_INSERT)))
-    insert_batch(weather, beds_available, insert_count)
+    insert_batch(weather, insert_count)
     st.session_state["last_insert_ts"] = now_ts
 
 # ─────────────────────────────────────────────
