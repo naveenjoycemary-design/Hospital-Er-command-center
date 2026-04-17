@@ -264,6 +264,9 @@ IST  = pytz.timezone("Asia/Kolkata")
 DEPARTMENTS = ["General Medicine", "Orthopedics", "Cardiology",
                "Neurology", "Pediatrics", "Trauma", "Burns", "Psychiatry"]
 
+GENERAL_BEDS  = int(TOTAL_BEDS * 0.8)   # 64
+EMERGENCY_BEDS = TOTAL_BEDS - GENERAL_BEDS  # 16
+
 DOCTORS = [
     "Dr. Ananya Iyer",   "Dr. Rajan Mehta",   "Dr. Priya Nair",
     "Dr. Suresh Kumar",  "Dr. Kavitha Rao",   "Dr. Arjun Patel",
@@ -373,12 +376,36 @@ def weather_admission_multiplier(sev: int) -> float:
 # ─────────────────────────────────────────────
 HOSPITAL_BRANCH = "City General Hospital"
 
-def insert_patient(weather: dict, beds_available: int):
+def insert_patient(weather: dict):
     sev   = weather_severity(weather)[0]
+
     multi = weather_admission_multiplier(sev)
     w_crit = [int(5 * multi), int(10 * multi), 35, 30, 20]
     triage = random.choices([1, 2, 3, 4, 5], weights=w_crit)[0]
-    bed_ok = (beds_available > 0) and (random.random() < 0.75)
+    # ── CURRENT BED USAGE ──
+    bed_df = run_query("""
+    SELECT 
+        SUM(CASE WHEN triage_level IN (1,2) THEN 1 ELSE 0 END) AS emergency_used,
+        SUM(CASE WHEN triage_level IN (3,4,5) THEN 1 ELSE 0 END) AS general_used
+    FROM er_patients_pro
+    WHERE bed_assigned = 1 AND discharged = 0
+    """)
+
+    emergency_used = int(bed_df["emergency_used"].iloc[0] or 0)
+    general_used   = int(bed_df["general_used"].iloc[0] or 0)
+
+
+    # ── BED ALLOCATION LOGIC ──
+    if triage in [1, 2]:
+        # Emergency patients
+        bed_ok = emergency_used < EMERGENCY_BEDS
+
+    else:
+        # General patients
+        bed_ok = general_used < GENERAL_BEDS
+    
+    if (emergency_used + general_used) >= TOTAL_BEDS:
+        bed_ok = False
     # ── WAIT TIME BASED ON TRIAGE ──
     if triage == 1:
         wait_time = random.randint(0, 5)
@@ -394,6 +421,9 @@ def insert_patient(weather: dict, beds_available: int):
 
     else:  # triage 5
         wait_time = random.randint(36, 45)
+    
+    
+    
     run_write("""
         INSERT INTO er_patients_pro
         (patient_code, patient_name, age, gender, triage_level, wait_time,
