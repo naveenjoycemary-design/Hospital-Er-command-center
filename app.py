@@ -649,7 +649,7 @@ last_hr_df    = hist_df[
 admissions_hr = len(last_hr_df)
 forecast_next = forecast_admissions(hist_df)
 perf_score    = performance_score(total_pts / TOTAL_BEDS, avg_wait, critical_cnt)
-overloaded    = (total_pts / TOTAL_BEDS) >= overload_pct
+overloaded = (beds_assigned / TOTAL_BEDS) >= overload_pct
 
 dept_counts         = df.groupby("department").size().reset_index(name="count")
 bottleneck_depts    = dept_counts[dept_counts["count"] >= dept_counts["count"].quantile(0.75)]
