@@ -379,6 +379,21 @@ def insert_patient(weather: dict, beds_available: int):
     w_crit = [int(5 * multi), int(10 * multi), 35, 30, 20]
     triage = random.choices([1, 2, 3, 4, 5], weights=w_crit)[0]
     bed_ok = (beds_available > 0) and (random.random() < 0.75)
+    # ── WAIT TIME BASED ON TRIAGE ──
+    if triage == 1:
+        wait_time = random.randint(0, 5)
+
+    elif triage == 2:
+        wait_time = random.randint(6, 15)
+
+    elif triage == 3:
+        wait_time = random.randint(16, 25)
+
+    elif triage == 4:
+        wait_time = random.randint(26, 35)
+
+    else:  # triage 5
+        wait_time = random.randint(36, 45)
     run_write("""
         INSERT INTO er_patients_pro
         (patient_code, patient_name, age, gender, triage_level, wait_time,
@@ -391,7 +406,7 @@ def insert_patient(weather: dict, beds_available: int):
         random.randint(1, 95),
         random.choice(["Male", "Female", "Other"]),
         triage,
-        random.randint(3, 160),
+        wait_time,
         random.choice(DEPARTMENTS),
         round(weather["temp"] + random.uniform(-2, 2), 1),
         random.choice(SYMPTOMS_MAP[triage]),
