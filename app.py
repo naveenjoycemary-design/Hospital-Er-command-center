@@ -286,7 +286,7 @@ TOTAL_BEDS    = 80
 MAX_ER_HOURS  = 6
 AUTO_INTERVAL = 60    # seconds
 OVERLOAD_PCT  = 0.85
-MIN_INSERT    = 10    # minimum patients per auto-insert cycle
+
 
 PLOTLY_DARK_LAYOUT = dict(
     template="plotly_dark",
@@ -582,17 +582,39 @@ weather         = get_weather(weather_city)
 w_sev, w_label  = weather_severity(weather)
 w_multi         = weather_admission_multiplier(w_sev)
 
-raw_df          = load_active()
-beds_available  = max(0, TOTAL_BEDS - (raw_df["bed_assigned"].sum() if not raw_df.empty else 0))
+full_df = load_active()
 
-# ── Auto-insert: minimum 10 patients per minute cycle ──
+beds_assigned = int(full_df["bed_assigned"].sum()) if not full_df.empty else 0
+beds_available = TOTAL_BEDS - beds_assigned
+
+
+# ── Smart auto-insert: 1–6 patients per cycle based on load & weather ──
 if "last_insert_ts" not in st.session_state:
     st.session_state["last_insert_ts"] = 0
 
 now_ts = time.time()
+
 if now_ts - st.session_state["last_insert_ts"] >= AUTO_INTERVAL:
-    insert_count = max(MIN_INSERT, int(round(w_multi * MIN_INSERT)))
+
+    # ── SMART INSERT CONTROL ──
+    if beds_assigned < TOTAL_BEDS * 0.6:
+        base = 3
+    elif beds_assigned < TOTAL_BEDS * 0.85:
+        base = 2
+    else:
+        base = 1  # slow down when near full
+
+    # apply weather effect
+    insert_count = int(base * w_multi)
+
+    # clamp limits
+    insert_count = max(1, min(insert_count, 6))
+
+    # optional randomness (recommended)
+    insert_count = random.randint(max(1, insert_count - 1), insert_count + 1)
+
     insert_batch(weather, insert_count)
+
     st.session_state["last_insert_ts"] = now_ts
 
 # ─────────────────────────────────────────────
@@ -602,7 +624,7 @@ df_raw = load_active()
 
 if df_raw.empty:
     st.warning("⚠️ No active patient data. Seeding initial batch…")
-    insert_batch(weather, TOTAL_BEDS, MIN_INSERT)
+    insert_batch(weather, 20)
     st.rerun()
 
 df_raw["arrival_time"] = pd.to_datetime(df_raw["arrival_time"])
@@ -630,12 +652,10 @@ df["Arrival (IST)"] = (
 df["Bed Status"]    = df["bed_assigned"].map({1: "✅ Assigned", 0: "❌ Waiting"})
 
 # KPIs
-total_pts     = len(df)
+total_pts = len(full_df)
 avg_wait      = round(df["wait_time"].mean(), 1)
 critical_df   = df[df["triage_level"].isin([1, 2])]
 critical_cnt  = len(critical_df)
-full_df = load_active()
-
 beds_assigned = int(full_df["bed_assigned"].sum())
 bed_occ_pct   = min(100, round(beds_assigned / TOTAL_BEDS * 100, 1))
 beds_avail    = TOTAL_BEDS - beds_assigned
@@ -648,7 +668,11 @@ last_hr_df    = hist_df[
 ] if not hist_df.empty else pd.DataFrame()
 admissions_hr = len(last_hr_df)
 forecast_next = forecast_admissions(hist_df)
-perf_score    = performance_score(total_pts / TOTAL_BEDS, avg_wait, critical_cnt)
+perf_score = performance_score(
+    beds_assigned / TOTAL_BEDS,
+    avg_wait,
+    critical_cnt
+)
 overloaded = (beds_assigned / TOTAL_BEDS) >= overload_pct
 
 dept_counts         = df.groupby("department").size().reset_index(name="count")
